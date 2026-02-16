@@ -75,7 +75,7 @@ export default function Navbar() {
                         onClick={() => handleNavClick('#home')}
                         className="text-xl font-bold glow-text hover:scale-105 transition-transform"
                     >
-                        &lt;Dev /&gt;
+                        &lt;SK PORTFOLIO WEB /&gt;
                     </button>
 
                     {/* Desktop Nav */}
