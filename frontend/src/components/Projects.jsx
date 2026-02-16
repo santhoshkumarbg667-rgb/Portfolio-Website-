@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
 import ProjectCard from './ProjectCard'
+import ProjectFormModal from './ProjectFormModal'
+import { FiPlus } from 'react-icons/fi'
 
 const defaultProjects = [
     {
@@ -51,23 +54,70 @@ const categories = ['all', 'frontend', 'backend', 'fullstack', 'other']
 export default function Projects() {
     const [activeFilter, setActiveFilter] = useState('all')
     const [projects, setProjects] = useState(defaultProjects)
+    const [modalOpen, setModalOpen] = useState(false)
+    const [editProject, setEditProject] = useState(null)
+    const { user } = useAuth()
+
+    const fetchProjects = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('projects')
+                .select('*')
+                .order('created_at', { ascending: false })
+            if (!error && data && data.length > 0) {
+                setProjects(data)
+            }
+        } catch {
+            // Use defaults
+        }
+    }
 
     useEffect(() => {
-        async function fetchProjects() {
-            try {
-                const { data, error } = await supabase
-                    .from('projects')
-                    .select('*')
-                    .order('created_at', { ascending: false })
-                if (!error && data && data.length > 0) {
-                    setProjects(data)
-                }
-            } catch {
-                // Use defaults
-            }
-        }
         fetchProjects()
     }, [])
+
+    const handleEdit = (project) => {
+        setEditProject(project)
+        setModalOpen(true)
+    }
+
+    const handleAdd = () => {
+        setEditProject(null)
+        setModalOpen(true)
+    }
+
+    const handleSave = async (payload, projectId) => {
+        try {
+            if (projectId) {
+                // Update existing
+                await supabase
+                    .from('projects')
+                    .update(payload)
+                    .eq('id', projectId)
+            } else {
+                // Create new
+                await supabase
+                    .from('projects')
+                    .insert([payload])
+            }
+            await fetchProjects()
+        } catch (err) {
+            console.error('Failed to save project:', err)
+        }
+    }
+
+    const handleDelete = async (projectId) => {
+        if (!window.confirm('Are you sure you want to delete this project?')) return
+        try {
+            await supabase
+                .from('projects')
+                .delete()
+                .eq('id', projectId)
+            await fetchProjects()
+        } catch (err) {
+            console.error('Failed to delete project:', err)
+        }
+    }
 
     const filtered =
         activeFilter === 'all'
@@ -90,6 +140,19 @@ export default function Projects() {
                     <p className="section-subtitle">
                         A showcase of my recent work and passion projects.
                     </p>
+
+                    {/* Admin: Add Project Button */}
+                    {user && (
+                        <motion.button
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            onClick={handleAdd}
+                            className="btn-primary text-sm py-2.5 px-6 mt-4 inline-flex items-center gap-2"
+                        >
+                            <FiPlus size={16} />
+                            Add Project
+                        </motion.button>
+                    )}
                 </motion.div>
 
                 {/* Filter */}
@@ -104,8 +167,8 @@ export default function Projects() {
                             key={cat}
                             onClick={() => setActiveFilter(cat)}
                             className={`px-5 py-2.5 rounded-xl text-sm font-medium capitalize transition-all duration-300 ${activeFilter === cat
-                                    ? 'bg-violet/20 text-violet-light border border-violet/40 shadow-lg shadow-violet/10'
-                                    : 'text-slate-400 border border-white/5 hover:text-white hover:bg-white/5'
+                                ? 'bg-violet/20 text-violet-light border border-violet/40 shadow-lg shadow-violet/10'
+                                : 'text-slate-400 border border-white/5 hover:text-white hover:bg-white/5'
                                 }`}
                         >
                             {cat}
@@ -117,7 +180,13 @@ export default function Projects() {
                 <motion.div layout className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     <AnimatePresence mode="popLayout">
                         {filtered.map((project) => (
-                            <ProjectCard key={project.id} project={project} />
+                            <ProjectCard
+                                key={project.id}
+                                project={project}
+                                isAdmin={!!user}
+                                onEdit={handleEdit}
+                                onDelete={handleDelete}
+                            />
                         ))}
                     </AnimatePresence>
                 </motion.div>
@@ -128,6 +197,16 @@ export default function Projects() {
                     </p>
                 )}
             </div>
+
+            {/* Edit/Add Modal */}
+            <AnimatePresence>
+                <ProjectFormModal
+                    isOpen={modalOpen}
+                    onClose={() => { setModalOpen(false); setEditProject(null) }}
+                    onSave={handleSave}
+                    editProject={editProject}
+                />
+            </AnimatePresence>
         </section>
     )
 }

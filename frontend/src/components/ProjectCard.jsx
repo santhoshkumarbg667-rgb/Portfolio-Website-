@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
-import { FiExternalLink, FiGithub } from 'react-icons/fi'
+import { FiExternalLink, FiGithub, FiEdit2, FiTrash2 } from 'react-icons/fi'
 
-export default function ProjectCard({ project }) {
+export default function ProjectCard({ project, isAdmin, onEdit, onDelete }) {
     return (
         <motion.div
             layout
@@ -9,8 +9,28 @@ export default function ProjectCard({ project }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.4 }}
-            className="glass-card rounded-2xl overflow-hidden group glow-border"
+            className="glass-card rounded-2xl overflow-hidden group glow-border relative"
         >
+            {/* Admin Buttons - only visible to admin */}
+            {isAdmin && (
+                <div className="absolute top-3 right-3 z-20 flex gap-2">
+                    <button
+                        onClick={() => onEdit(project)}
+                        className="w-8 h-8 rounded-lg bg-violet/80 hover:bg-violet flex items-center justify-center text-white transition-all duration-300 hover:scale-110 shadow-lg shadow-violet/30"
+                        title="Edit Project"
+                    >
+                        <FiEdit2 size={14} />
+                    </button>
+                    <button
+                        onClick={() => onDelete(project.id)}
+                        className="w-8 h-8 rounded-lg bg-red-500/80 hover:bg-red-500 flex items-center justify-center text-white transition-all duration-300 hover:scale-110 shadow-lg shadow-red-500/30"
+                        title="Delete Project"
+                    >
+                        <FiTrash2 size={14} />
+                    </button>
+                </div>
+            )}
+
             {/* Image */}
             <div className="relative h-48 overflow-hidden">
                 {project.image_url ? (
